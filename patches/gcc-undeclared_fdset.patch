@@ -1,0 +1,10 @@
+--- libcc1/connection.cc.orig	Sun Apr 11 12:54:56 2021
++++ libcc1/connection.cc	Sun Apr 11 12:52:18 2021
+@@ -26,6 +26,7 @@
+ #include "marshall.hh"
+ #include "connection.hh"
+ #include "rpc.hh"
++#include <sys/select.h>
+ 
+ cc1_plugin::connection::~connection ()
+ {
