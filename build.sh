@@ -1,7 +1,7 @@
 set -e
 
 ROOTDIR="$(pwd)"
-PREFIX="$ROOTDIR/dist"
+PREFIX="$ROOTDIR/prefix"
 DISTDIR="$ROOTDIR/distfiles"
 PATCHDIR="$ROOTDIR/patches"
 
