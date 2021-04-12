@@ -128,6 +128,7 @@ system()
     -o out/sega.o system/src/boot/sega.s
 
   "$CC" -o out/sizebnd system/src/sizebnd/sizebnd.c
+  "$CC" -o out/bintos system/src/bintos/bintos.c
 
   "$CXX" \
     -Wno-writable-strings -DMAX_PATH=MAXPATHLEN \
@@ -161,11 +162,15 @@ md()
     m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c -o md/$UNIT.o system/src/md/$UNIT.s
   done
 
+  m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c -o md/libres.o system/res/libres.s
+
   UNITS="z80_drv0 z80_drv1 z80_drv2 z80_drv3 z80_xgm"
 
   for UNIT in $UNITS; do
     echo "Compiling: $UNIT.s80"
-    out/sjasm $RELEASE_Z80FLAGS system/src/md/$UNIT.s80 md/$UNIT.o
+    out/sjasm $RELEASE_Z80FLAGS system/src/md/$UNIT.s80 md/$UNIT.o80
+    out/bintos md/$UNIT.o80
+    m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c -o md/$UNIT.o md/$UNIT.s
   done
 
   cd md
