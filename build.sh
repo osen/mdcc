@@ -141,6 +141,15 @@ md()
     m68k-elf-gcc $RELEASE_CFLAGS -c -o md/$UNIT.o system/src/md/$UNIT.c
   done
 
+  UNITS=" \
+    bmp_a dma_a kdebug maths3D_a memory_a smp_null \
+    smp_null_pcm sram_a sys_a tools_a vdp_tile_a"
+
+  for UNIT in $UNITS; do
+    echo "Compiling: $UNIT.s"
+    m68k-elf-gcc $RELEASE_ASMFLAGS -c -o md/$UNIT.o system/src/md/$UNIT.s
+  done
+
   cd md
   m68k-elf-ar rcs libmd.a --plugin=$PREFIX/libexec/gcc/m68k-elf/9.3.0/liblto_plugin.so *.o
   mkdir -p "$SYSTEMDIR/lib"
@@ -167,17 +176,6 @@ example()
     "$PREFIX/lib/libgcc.a" \
     -o out/rom.out \
     -Wl,--gc-sections
-
-  #m68k-elf-ld \
-  #  -T "$SYSTEMDIR/ldscripts/md.ld" \
-  #  -nostdlib \
-  #  out/sega.o \
-  #  out/main.o \
-  #  "$SYSTEMDIR/lib/libmd.a" \
-  #  "$PREFIX/lib/libgcc.a" \
-  #  -o out/rom.out \
-  #  --plugin=$PREFIX/libexec/gcc/m68k-elf/9.3.0/liblto_plugin.so \
-  #  --gc-sections
 
   #m68k-elf-gcc \
   #  -n \
@@ -210,3 +208,4 @@ system
 md
 example
 #clean
+
