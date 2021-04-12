@@ -106,9 +106,12 @@ gcc_second()
 }
 
 INC="-I$SYSTEMDIR/include -I$SYSTEMDIR/res"
-CFLAGS="$INC -m68000 -Wall -Wextra -Wno-shift-negative-value -Wno-main -Wno-unused-parameter -fno-builtin"
+CFLAGS="$INC -m68000 -Wall -Wextra -Wno-shift-negative-value -Wno-main -Wno-unused-parameter -fno-builtin -fno-use-linker-plugin"
 RELEASE_CFLAGS="$CFLAGS -O3 -fuse-linker-plugin -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer -flto"
 RELEASE_ASMFLAGS="$CFLAGS -O3 -fuse-linker-plugin -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer -S"
+RELEASE_Z80FLAGS="-isrc -iinc"
+
+RELEASE_CFLAGS="$CFLAGS -O3 -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer"
 
 system()
 {
@@ -117,10 +120,18 @@ system()
   mkdir out
 
   m68k-elf-gcc $CFLAGS -c -o out/rom_head.o system/src/boot/rom_head.c
-  m68k-elf-ld -T "$SYSTEMDIR/ldscripts/md.ld" -nostdlib --oformat binary -o out/rom_head.bin out/rom_head.o
-  m68k-elf-gcc -x assembler-with-cpp $CFLAGS -c -o out/sega.o system/src/boot/sega.s
+
+  m68k-elf-ld -T "$SYSTEMDIR/ldscripts/md.ld" -nostdlib --oformat binary \
+    -o out/rom_head.bin out/rom_head.o
+
+  m68k-elf-gcc -x assembler-with-cpp $CFLAGS -c \
+    -o out/sega.o system/src/boot/sega.s
 
   "$CC" -o out/sizebnd system/src/sizebnd/sizebnd.c
+
+  "$CXX" \
+    -Wno-writable-strings -DMAX_PATH=MAXPATHLEN \
+    -o out/sjasm "$SYSTEMDIR/src/sjasm/"*.cpp
 }
 
 md()
@@ -147,7 +158,14 @@ md()
 
   for UNIT in $UNITS; do
     echo "Compiling: $UNIT.s"
-    m68k-elf-gcc $RELEASE_ASMFLAGS -c -o md/$UNIT.o system/src/md/$UNIT.s
+    m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c -o md/$UNIT.o system/src/md/$UNIT.s
+  done
+
+  UNITS="z80_drv0 z80_drv1 z80_drv2 z80_drv3 z80_xgm"
+
+  for UNIT in $UNITS; do
+    echo "Compiling: $UNIT.s80"
+    out/sjasm $RELEASE_Z80FLAGS system/src/md/$UNIT.s80 md/$UNIT.o
   done
 
   cd md
@@ -166,17 +184,6 @@ example()
     -o out/main.o \
     "$SYSTEMDIR/src/hello/main.c"
 
-  m68k-elf-gcc \
-    -n \
-    -T "$SYSTEMDIR/ldscripts/md.ld" \
-    -nostdlib \
-    out/sega.o \
-    out/main.o \
-    "$SYSTEMDIR/lib/libmd.a" \
-    "$PREFIX/lib/libgcc.a" \
-    -o out/rom.out \
-    -Wl,--gc-sections
-
   #m68k-elf-gcc \
   #  -n \
   #  -T "$SYSTEMDIR/ldscripts/md.ld" \
@@ -185,7 +192,19 @@ example()
   #  out/main.o \
   #  "$SYSTEMDIR/lib/libmd.a" \
   #  "$PREFIX/lib/libgcc.a" \
-  #  -o out/rom.out
+  #  -o out/rom.out \
+  #  -Wl,--gc-sections
+
+  m68k-elf-gcc \
+    -n \
+    -fno-use-linker-plugin \
+    -T "$SYSTEMDIR/ldscripts/md.ld" \
+    -nostdlib \
+    out/sega.o \
+    out/main.o \
+    "$SYSTEMDIR/lib/libmd.a" \
+    "$PREFIX/lib/libgcc.a" \
+    -o out/rom.out
 
   m68k-elf-objcopy -O binary out/rom.out out/rom.bin
   out/sizebnd out/rom.bin -sizealign 131072
@@ -204,8 +223,10 @@ binutils
 gcc_first
 newlib
 gcc_second
+
 system
 md
 example
+
 #clean
 
