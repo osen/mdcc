@@ -51,6 +51,7 @@ gcc_first()
     --without-headers \
     --with-newlib \
     --enable-languages=c \
+    --disable-lto \
     --disable-libssp \
     --disable-tls \
     --with-cpu=m68000 \
@@ -59,10 +60,6 @@ gcc_first()
     --disable-multilib
 
   gmake all install
-
-  cd "$PREFIX/libexec/gcc/m68k-elf/9.3.0"
-  ln -s liblto_plugin.so.0.0 liblto_plugin.so.0
-  ln -s liblto_plugin.so.0 liblto_plugin.so
 }
 
 newlib()
@@ -94,6 +91,7 @@ gcc_second()
     --disable-tls \
     --enable-threads=single \
     --enable-languages=c \
+    --disable-lto \
     --with-cpu=m68000 \
     --disable-werror \
     --disable-nls \
@@ -109,7 +107,7 @@ INC="-I$SYSTEMDIR/include -I$SYSTEMDIR/res"
 WARN="-Wall -Wextra -Wno-shift-negative-value -Wno-main -Wno-unused-parameter"
 CFLAGS="$INC $WARN -m68000 -fno-builtin"
 
-RELEASE_CFLAGS="$CFLAGS -O3 -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer -flto"
+RELEASE_CFLAGS="$CFLAGS -O3 -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer"
 
 system()
 {
@@ -172,7 +170,7 @@ md()
   done
 
   cd md
-  m68k-elf-ar rcs libmd.a --plugin=$PREFIX/libexec/gcc/m68k-elf/9.3.0/liblto_plugin.so *.o
+  m68k-elf-ar rcs libmd.a *.o
   mkdir -p "$SYSTEMDIR/lib"
   cp libmd.a "$SYSTEMDIR/lib"
 }
@@ -191,12 +189,12 @@ example()
     $RELEASE_CFLAGS \
     -T "$SYSTEMDIR/ldscripts/md.ld" \
     -nostdlib \
-    out/sega.o \
-    "$PREFIX/lib/libgcc.a" \
-    "$SYSTEMDIR/lib/libmd.a" \
     "$SYSTEMDIR/src/hello/main.c" \
-    -o out/rom.out \
-    -Wl,--gc-sections
+    out/sega.o \
+    "$SYSTEMDIR/lib/libmd.a" \
+    "$PREFIX/lib/libgcc.a" \
+    -Wl,--gc-sections \
+    -o out/rom.out
 
   m68k-elf-objcopy -O binary out/rom.out out/rom.bin
   out/sizebnd out/rom.bin -sizealign 131072
