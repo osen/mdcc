@@ -113,29 +113,32 @@ system()
 {
   cd "$ROOTDIR"
   rm -rf out
-  mkdir out
+  cp -r "$SYSTEMDIR" out
 
-  m68k-elf-gcc $CFLAGS -c -o out/rom_head.o system/src/boot/rom_head.c
+  m68k-elf-gcc $CFLAGS -c -o out/rom_head.o out/src/boot/rom_head.c
 
-  m68k-elf-ld -T "$SYSTEMDIR/lib/ldscripts/md.ld" -nostdlib --oformat binary \
+  m68k-elf-ld -T out/lib/ldscripts/md.ld -nostdlib --oformat binary \
     -o out/rom_head.bin out/rom_head.o
 
   m68k-elf-gcc -x assembler-with-cpp $CFLAGS -c \
-    -o out/sega.o system/src/boot/sega.s
+    -o out/lib/sega.o out/src/boot/sega.s
 
-  "$CC" -o out/sizebnd src/sizebnd/sizebnd.c
-  "$CC" -o out/bintos src/bintos/bintos.c
+  rm out/rom_head.*
 
-  "$CXX" \
-    -Wno-writable-strings -DMAX_PATH=MAXPATHLEN \
-    -o out/sjasm src/sjasm/*.cpp
+  "$CC" -o out/bin/sizebnd src/sizebnd/sizebnd.c
 }
 
 md()
 {
   cd "$ROOTDIR"
-  rm -rf out/md
-  mkdir out/md
+  rm -rf md
+  mkdir md
+
+  "$CC" -o md/bintos src/bintos/bintos.c
+
+  "$CXX" \
+    -Wno-writable-strings -DMAX_PATH=MAXPATHLEN \
+    -o md/sjasm src/sjasm/*.cpp
 
   UNITS=" \
     bmp dma everdrive fat16 joy map mapper maths \
@@ -146,7 +149,7 @@ md()
 
   for UNIT in $UNITS; do
     echo "Compiling: $UNIT.c"
-    m68k-elf-gcc $RELEASE_CFLAGS -c -o out/md/$UNIT.o system/src/md/$UNIT.c
+    m68k-elf-gcc $RELEASE_CFLAGS -c -o md/$UNIT.o out/src/md/$UNIT.c
   done
 
   UNITS=" \
@@ -157,27 +160,29 @@ md()
     echo "Compiling: $UNIT.s"
 
     m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c \
-      -o out/md/$UNIT.o system/src/md/$UNIT.s
+      -o md/$UNIT.o out/src/md/$UNIT.s
   done
 
   m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c \
-    -o out/md/libres.o system/res/libres.s
+    -o md/libres.o out/res/libres.s
 
   UNITS="z80_drv0 z80_drv1 z80_drv2 z80_drv3 z80_xgm"
 
   for UNIT in $UNITS; do
     echo "Compiling: $UNIT.s80"
-    out/sjasm -q system/src/md/$UNIT.s80 out/md/$UNIT.o80
-    out/bintos out/md/$UNIT.o80
+    md/sjasm -q out/src/md/$UNIT.s80 md/$UNIT.o80
+    md/bintos md/$UNIT.o80
 
     m68k-elf-gcc -x assembler-with-cpp $RELEASE_CFLAGS -c \
-      -o out/md/$UNIT.o out/md/$UNIT.s
+      -o md/$UNIT.o md/$UNIT.s
   done
 
-  cd out/md
+  cd md
   m68k-elf-ar rcs libmd.a *.o
-  mkdir -p "$SYSTEMDIR/lib"
-  cp libmd.a "$SYSTEMDIR/lib"
+  cp libmd.a ../out/lib
+
+  cd "$ROOTDIR"
+  rm -rf md
 }
 
 example()
@@ -195,14 +200,14 @@ example()
     -T "$SYSTEMDIR/lib/ldscripts/md.ld" \
     -nostdlib \
     "$SYSTEMDIR/src/hello/main.c" \
-    out/sega.o \
-    "$SYSTEMDIR/lib/libmd.a" \
+    out/lib/sega.o \
+    out/lib/libmd.a \
     "$PREFIX/lib/libgcc.a" \
     -Wl,--gc-sections \
-    -o out/rom.out
+    -o rom.out
 
-  m68k-elf-objcopy -O binary out/rom.out out/rom.bin
-  out/sizebnd out/rom.bin -sizealign 131072
+  m68k-elf-objcopy -O binary rom.out rom.bin
+  out/bin/sizebnd rom.bin -sizealign 131072
 }
 
 clean()
@@ -210,7 +215,6 @@ clean()
   cd "$ROOTDIR"
   rm -rf md
   rm -rf out
-  rm -rf "$SYSTEMDIR/lib"
 }
 
 mkdir -p work
