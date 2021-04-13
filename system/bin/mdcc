@@ -1,1 +1,41 @@
-# TODO
+#!/bin/sh
+
+set -e
+
+PREFIX="$(cd "$(dirname "$(which "$0")")" && cd .. && pwd)"
+GCC="$PREFIX/gcc/bin/m68k-elf-gcc"
+OBJCOPY="$PREFIX/gcc/bin/m68k-elf-objcopy"
+SIZEBND="$PREFIX/bin/sizebnd"
+
+INC="-I$PREFIX/include -I$PREFIX/res"
+WARN="-Wall -Wextra -Wno-shift-negative-value -Wno-main -Wno-unused-parameter"
+CFLAGS="$INC $WARN -m68000 -fno-builtin"
+
+RELEASE_CFLAGS="$CFLAGS -O3 -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer"
+
+LINK=1
+
+for ARG in "$@"; do
+  if [ "$ARG" = "-c" ]; then
+    LINK=0
+    break
+  fi
+done
+
+if [ $LINK = 0 ]; then
+  exec "$GCC" $RELEASE_CFLAGS "$@"
+fi
+
+"$GCC" $RELEASE_CFLAGS \
+  -T "$PREFIX/lib/ldscripts/md.ld" \
+  -nostdlib \
+  "$@" \
+  "$PREFIX/lib/sega.o" \
+  "$PREFIX/lib/libmd.a" \
+  "$PREFIX/gcc/lib/libgcc.a" \
+  -Wl,--gc-sections \
+  -o rom.out
+
+"$OBJCOPY" -O binary rom.out rom.bin
+"$SIZEBND" rom.bin -sizealign 131072
+
