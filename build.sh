@@ -13,7 +13,7 @@ export PATH="$PATH:$PREFIX/bin"
 binutils()
 {
   cd "$ROOTDIR/work"
-  7z x -so "$DISTDIR/binutils-2.34.tar.xz" | tar xf -
+  unxz < "$DISTDIR/binutils-2.34.tar.xz" | tar -xf -
   cd binutils-2.34
   mkdir build && cd build
 
@@ -29,18 +29,18 @@ binutils()
 gcc_first()
 {
   cd "$ROOTDIR/work"
-  7z x -so "$DISTDIR/gcc-9.3.0.tar.xz" | tar xf -
+  unxz < "$DISTDIR/gcc-9.3.0.tar.xz" | tar -xf -
   cd gcc-9.3.0
 
   patch -d . < "$PATCHDIR/gcc-undeclared_fdset.patch"
 
-  7z x -so "$DISTDIR/gmp-6.1.0.tar.bz2" | tar xf -
+  tar -xjf "$DISTDIR/gmp-6.1.0.tar.bz2"
   mv gmp-* gmp
-  7z x -so "$DISTDIR/mpfr-3.1.4.tar.bz2" | tar xf -
+  tar -xjf "$DISTDIR/mpfr-3.1.4.tar.bz2"
   mv mpfr-* mpfr
-  7z x -so "$DISTDIR/mpc-1.0.3.tar.gz" | tar xf -
+  tar -xzf "$DISTDIR/mpc-1.0.3.tar.gz"
   mv mpc-* mpc
-  7z x -so "$DISTDIR/isl-0.18.tar.bz2" | tar xf -
+  tar -xjf "$DISTDIR/isl-0.18.tar.bz2"
   mv isl-* isl
 
   mkdir first && cd first
@@ -65,7 +65,7 @@ gcc_first()
 newlib()
 {
   cd "$ROOTDIR/work"
-  7z x -so "$DISTDIR/newlib-3.3.0.tar.gz" | tar xf -
+  tar -xzf "$DISTDIR/newlib-3.3.0.tar.gz"
   cd newlib-3.3.0
   mkdir build && cd build
 
@@ -126,6 +126,8 @@ system()
   rm out/rom_head.*
 
   "$CC" -o out/bin/sizebnd src/sizebnd/sizebnd.c
+  chmod +x out/bin/mdcc
+  cp -r prefix out/gcc
 }
 
 md()

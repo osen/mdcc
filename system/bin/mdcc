@@ -37,5 +37,6 @@ fi
   -o rom.out
 
 "$OBJCOPY" -O binary rom.out rom.bin
+rm rom.out
 "$SIZEBND" rom.bin -sizealign 131072
 
